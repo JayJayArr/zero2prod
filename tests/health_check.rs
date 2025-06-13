@@ -14,10 +14,9 @@ async fn health_check_works() {
 }
 
 async fn spawn_app() {
-    let server = zero2prod::run();
+    let server = zero2prod::run().await.unwrap();
 
-    let handle = tokio::spawn(server);
+    let _handle = tokio::spawn(async move { server.await.unwrap() });
 
-    let _ = tokio::join!(handle);
+    // let _ = tokio::join!(handle);
 }
-
