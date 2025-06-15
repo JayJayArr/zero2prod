@@ -69,7 +69,7 @@ async fn spawn_app() -> String {
         .expect("could not bind random port");
 
     let port = listener.local_addr().unwrap().port();
-    let server = zero2prod::run(listener).unwrap();
+    let server = zero2prod::startup::run(listener).unwrap();
 
     let _handle = tokio::spawn(async move { server.await.unwrap() });
 
