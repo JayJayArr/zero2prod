@@ -15,5 +15,17 @@ axum = {version = "0.8.4", features= ["tokio", "form"]}
 serde = {version ="1.0.219", features= ["derive"]}
 tokio = {version = "1.45.1", features = ["rt-multi-thread"]}
 
+[dependencies.sqlx]
+version = "0.8.6"
+default-features = false
+features = [
+  "macros",
+  "postgres",
+  "uuid",
+  "chrono", 
+  "migrate",
+  "runtime-tokio-rustls"
+]
+
 [dev-dependencies]
 reqwest = "0.12.20"
