@@ -1,12 +1,14 @@
-use std::sync::Arc;
-
 use axum::{
     Router,
+    extract::{MatchedPath, Request},
     routing::{get, post},
     serve::Serve,
 };
 use sqlx::PgPool;
+use std::sync::Arc;
 use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
+use tracing::{info, info_span};
 
 use crate::routes::{health_check_handler, subscribe_handler};
 
@@ -25,7 +27,25 @@ pub fn run(
     let app = Router::new()
         .route("/health_check", get(health_check_handler))
         .route("/subscriptions", post(subscribe_handler))
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
+                // Log the matched route's path (with placeholders not filled in).
+                // Use request.uri() or OriginalUri if you want the real path.
+                let matched_path = request
+                    .extensions()
+                    .get::<MatchedPath>()
+                    .map(MatchedPath::as_str);
+
+                info_span!(
+                    "http_request",
+                    method = ?request.method(),
+                    matched_path,
+                    some_other_field = tracing::field::Empty,
+                )
+            }),
+        )
         .with_state(state);
 
+    info!("Starting server");
     Ok(axum::serve(listener, app))
 }

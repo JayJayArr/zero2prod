@@ -11,11 +11,16 @@ path= "src/main.rs"
 name = "zero2prod"
 
 [dependencies]
-axum = {version = "0.8.4", features= ["tokio", "form", "macros"]}
+axum = {version = "0.8.4", features= ["tokio", "form", "macros", "tracing"]}
 chrono = "0.4.41"
 config = {version = "0.15.11", features = ["yaml"]}
 serde = {version ="1.0.219", features= ["derive"]}
 tokio = {version = "1.45.1", features = ["rt-multi-thread"]}
+tower-http = {version = "0.6.6", features = ["trace", "follow-redirect"]}
+tracing = "0.1.41"
+tracing-bunyan-formatter = "0.3.10"
+tracing-log = "0.2.0"
+tracing-subscriber = {version = "0.3.19", features = ["env-filter", "registry"]}
 uuid = {version = "1.17.0", features = ["v4"]}
 
 [dependencies.sqlx]
@@ -32,3 +37,5 @@ features = [
 
 [dev-dependencies]
 reqwest = "0.12.20"
+once_cell = "1.21.3"
+
