@@ -120,7 +120,7 @@ jobs:
       - name: Migrate database
         run: SKIP_DOCKER=true ./scripts/init_db.sh
       - name: install cargo-llvm-cov
-        uses: taiki-e/install-avtion@cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
       - name: generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: generate report
