@@ -1,7 +1,7 @@
 use axum::{Form, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::Utc;
 use serde::Deserialize;
-use tracing::Instrument;
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::startup::AppState;
@@ -12,27 +12,34 @@ pub struct FormData {
     name: String,
 }
 
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(form, state),
+    fields(
+        request_id = %Uuid::new_v4(),
+        subscriber_email = %form.email,
+        subscriber_name= %form.name
+    )
+)]
 pub async fn subscribe_handler(
     State(state): State<AppState>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
-    let request_id = Uuid::new_v4();
-    let request_span = tracing::info_span!(
-    "Adding a new subscriber.",
-    %request_id,
-    subscriber_email = %form.email,
-    subscriber_name= %form.name
-    );
+    match insert_subscriber(&state.pg_pool, &form).await {
+        Ok(_) => StatusCode::OK,
+        Err(e) => {
+            tracing::error!("Failed to execute query: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
+}
 
-    let _request_span_guard = request_span.enter();
-    tracing::info!(
-        "request:if {} - Adding '{}' '{}' as a subscriber",
-        request_id,
-        form.email,
-        form.name
-    );
-    let query_span = tracing::info_span!("Saving new subscriber details in the database");
-    match sqlx::query!(
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
@@ -42,20 +49,11 @@ pub async fn subscribe_handler(
         form.name,
         Utc::now()
     )
-    .execute(state.pg_pool.as_ref())
-    .instrument(query_span)
+    .execute(pool)
     .await
-    {
-        Ok(_) => {
-            tracing::info!(
-                "request_id {} - New subscriber details have been saved",
-                request_id
-            );
-            StatusCode::OK
-        }
-        Err(e) => {
-            tracing::error!("request_id {} - Failed to execute query: {}", request_id, e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
