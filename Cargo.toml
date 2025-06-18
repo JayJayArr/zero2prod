@@ -17,7 +17,7 @@ config = {version = "0.15.11", features = ["yaml"]}
 secrecy = {version= "0.10.3", features = ["serde"]}
 serde = {version ="1.0.219", features= ["derive"]}
 tokio = {version = "1.45.1", features = ["rt-multi-thread"]}
-tower-http = {version = "0.6.6", features = ["trace", "follow-redirect"]}
+tower-http = {version = "0.6.6", features = ["trace", "follow-redirect", "request-id"]}
 tracing = "0.1.41"
 tracing-bunyan-formatter = "0.3.10"
 tracing-log = "0.2.0"

@@ -1,4 +1,5 @@
 use config::Config;
+use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
@@ -21,24 +22,37 @@ pub struct Settings {
 #[derive(Deserialize, Clone)]
 pub struct DatabaseSettings {
     pub username: String,
-    pub password: String,
+    pub password: SecretString,
     pub host: String,
     pub port: u16,
     pub database_name: String,
 }
 
 impl DatabaseSettings {
-    pub fn connection_string(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database_name
+    pub fn connection_string(&self) -> SecretString {
+        SecretString::new(
+            format!(
+                "postgres://{}:{}@{}:{}/{}",
+                self.username,
+                self.password.expose_secret(),
+                self.host,
+                self.port,
+                self.database_name
+            )
+            .into(),
         )
     }
 
-    pub fn connection_string_without_db(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}",
-            self.username, self.password, self.host, self.port
+    pub fn connection_string_without_db(&self) -> SecretString {
+        SecretString::new(
+            format!(
+                "postgres://{}:{}@{}:{}",
+                self.username,
+                self.password.expose_secret(),
+                self.host,
+                self.port
+            )
+            .into(),
         )
     }
 }
