@@ -39,7 +39,7 @@ jobs:
         run: cargo install sqlx-cli --version=${{ env.SQLX_VERSION }} --features ${{ env.SQLX_FEATURES }} --no-default-features --locked
       - name: create app user in postgres
         run: |
-          sudo apt install postgresql-client
+          sudo apt-get install postgresql-client
           #Create the app user
           CREATE_QUERY="CREATE USER ${APP_USER} WITH PASSWORD '${APP_USER_PWD}';"
           PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${CREATE_QUERY}"
