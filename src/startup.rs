@@ -8,7 +8,7 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing::{info, info_span};
+use tracing::info_span;
 
 use crate::routes::{health_check_handler, subscribe_handler};
 
@@ -46,6 +46,5 @@ pub fn run(
         )
         .with_state(state);
 
-    info!("Starting server");
     Ok(axum::serve(listener, app))
 }

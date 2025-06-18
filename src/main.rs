@@ -1,6 +1,7 @@
 use secrecy::ExposeSecret;
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
+use tracing::info;
 use zero2prod::{
     configuration::get_configuration,
     startup::run,
@@ -15,9 +16,10 @@ async fn main() -> std::io::Result<()> {
     //Load Config
     let configuration = get_configuration().expect("failed to read config");
     //create postgres connection pool from config
-    let connection_pool =
-        PgPool::connect_lazy(configuration.database.connection_string().expose_secret())
-            .expect("Failed to create Postgres connection pool.");
+    let connection_pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(5))
+        .connect_lazy(configuration.database.connection_string().expose_secret())
+        .expect("Failed to create Postgres connection pool.");
 
     let listener = TcpListener::bind(format!(
         "{}:{}",
@@ -25,6 +27,10 @@ async fn main() -> std::io::Result<()> {
     ))
     .await
     .expect("could not bind port");
+    info!(
+        "Starting app on {:?}:{:?}",
+        configuration.application.host, configuration.application.port
+    );
     //Start the application
     run(listener, connection_pool)
         .expect("failed running app")

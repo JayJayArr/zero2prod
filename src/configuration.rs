@@ -21,13 +21,13 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     settings.try_deserialize()
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct DatabaseSettings {
     pub username: String,
     pub password: SecretString,
@@ -35,7 +35,7 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub database_name: String,
 }
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct ApplicationSettings {
     pub port: u16,
     pub host: String,
