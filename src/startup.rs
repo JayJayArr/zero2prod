@@ -10,19 +10,25 @@ use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::info_span;
 
-use crate::routes::{health_check_handler, subscribe_handler};
+use crate::{
+    email_client::EmailClient,
+    routes::{health_check_handler, subscribe_handler},
+};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub pg_pool: Arc<PgPool>,
+    pub email_client: Arc<EmailClient>,
 }
 
 pub fn run(
     listener: TcpListener,
     connection: PgPool,
+    email_client: EmailClient,
 ) -> Result<Serve<TcpListener, Router, Router>, std::io::Error> {
     let state = AppState {
         pg_pool: Arc::new(connection),
+        email_client: Arc::new(email_client),
     };
     let app = Router::new()
         .route("/health_check", get(health_check_handler))
