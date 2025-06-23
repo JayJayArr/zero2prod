@@ -1,10 +1,6 @@
-use sqlx::postgres::PgPoolOptions;
-use tokio::net::TcpListener;
-use tracing::info;
 use zero2prod::{
     configuration::get_configuration,
-    email_client::EmailClient,
-    startup::run,
+    startup::Application,
     telemetry::{get_subscriber, init_subscriber},
 };
 
@@ -16,36 +12,8 @@ async fn main() -> std::io::Result<()> {
     //Load Config
     let configuration = get_configuration().expect("failed to read config");
     //create postgres connection pool from config
-    let connection_pool = PgPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_secs(5))
-        .connect_lazy_with(configuration.database.with_db());
 
-    let timeout = configuration.email_client.timeout();
-    let sender_email = configuration
-        .email_client
-        .sender()
-        .expect("Invalid sender email address");
-    let email_client = EmailClient::new(
-        configuration.email_client.base_url,
-        sender_email,
-        configuration.email_client.authorization_token,
-        timeout,
-    );
-
-    let listener = TcpListener::bind(format!(
-        "{}:{}",
-        configuration.application.host, configuration.application.port
-    ))
-    .await
-    .expect("could not bind port");
-    info!(
-        "Starting app on {:?}:{:?}",
-        configuration.application.host, configuration.application.port
-    );
-    //Start the application
-    run(listener, connection_pool, email_client)
-        .expect("failed running app")
-        .await
-        .unwrap();
+    let application = Application::build(&configuration).await?;
+    application.run_until_stopped().await?;
     Ok(())
 }

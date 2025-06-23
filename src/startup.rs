@@ -1,24 +1,29 @@
+use crate::{
+    configuration::{DatabaseSettings, Settings},
+    email_client::EmailClient,
+    routes::{health_check_handler, subscribe_handler},
+};
 use axum::{
     Router,
     extract::{MatchedPath, Request},
     routing::{get, post},
     serve::Serve,
 };
-use sqlx::PgPool;
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing::info_span;
-
-use crate::{
-    email_client::EmailClient,
-    routes::{health_check_handler, subscribe_handler},
-};
+use tracing::{info, info_span};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub pg_pool: Arc<PgPool>,
     pub email_client: Arc<EmailClient>,
+}
+
+pub struct Application {
+    port: u16,
+    server: Serve<TcpListener, Router, Router>,
 }
 
 pub fn run(
@@ -53,4 +58,48 @@ pub fn run(
         .with_state(state);
 
     Ok(axum::serve(listener, app))
+}
+
+impl Application {
+    pub async fn build(configuration: &Settings) -> Result<Self, std::io::Error> {
+        let connection_pool = get_connection_pool(&configuration.database);
+        let sender_email = configuration
+            .email_client
+            .sender()
+            .expect("Invalid sender email address");
+        let email_client = EmailClient::new(
+            configuration.clone().email_client.base_url,
+            sender_email,
+            configuration.clone().email_client.authorization_token,
+            configuration.email_client.timeout(),
+        );
+        let listener = TcpListener::bind(format!(
+            "{}:{}",
+            configuration.application.host, configuration.application.port
+        ))
+        .await
+        .expect("could not bind port");
+        let port = listener.local_addr().unwrap().port();
+        info!(
+            "Starting app on {:?}:{:?}",
+            configuration.application.host, configuration.application.port
+        );
+        //Start the application
+        let server = run(listener, connection_pool, email_client)?;
+        Ok(Self { port, server })
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
+        self.server.await
+    }
+}
+
+pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
+    PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(5))
+        .connect_lazy_with(configuration.with_db())
 }
