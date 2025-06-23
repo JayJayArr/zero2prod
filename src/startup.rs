@@ -1,7 +1,7 @@
 use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    routes::{health_check_handler, subscribe_handler},
+    routes::{health_check_handler, subscribe_handler, subscriptions_confirm_handler},
 };
 use axum::{
     Router,
@@ -19,25 +19,31 @@ use tracing::{info, info_span};
 pub struct AppState {
     pub pg_pool: Arc<PgPool>,
     pub email_client: Arc<EmailClient>,
+    pub base_url: Arc<ApplicationBaseUrl>,
 }
 
 pub struct Application {
     port: u16,
     server: Serve<TcpListener, Router, Router>,
 }
+#[derive(Clone, Debug)]
+pub struct ApplicationBaseUrl(pub String);
 
 pub fn run(
     listener: TcpListener,
     connection: PgPool,
     email_client: EmailClient,
+    base_url: String,
 ) -> Result<Serve<TcpListener, Router, Router>, std::io::Error> {
     let state = AppState {
         pg_pool: Arc::new(connection),
         email_client: Arc::new(email_client),
+        base_url: Arc::new(ApplicationBaseUrl(base_url)),
     };
     let app = Router::new()
         .route("/health_check", get(health_check_handler))
         .route("/subscriptions", post(subscribe_handler))
+        .route("/subscriptions/confirm", get(subscriptions_confirm_handler))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
                 let request_id = uuid::Uuid::new_v4();
@@ -85,7 +91,12 @@ impl Application {
             configuration.application.host, configuration.application.port
         );
         //Start the application
-        let server = run(listener, connection_pool, email_client)?;
+        let server = run(
+            listener,
+            connection_pool,
+            email_client,
+            configuration.application.base_url.clone(),
+        )?;
         Ok(Self { port, server })
     }
 
