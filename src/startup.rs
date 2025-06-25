@@ -45,21 +45,22 @@ pub fn run(
         .route("/subscriptions", post(subscribe_handler))
         .route("/subscriptions/confirm", get(subscriptions_confirm_handler))
         .layer(
-            TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
-                let request_id = uuid::Uuid::new_v4();
-                let matched_path = request
-                    .extensions()
-                    .get::<MatchedPath>()
-                    .map(MatchedPath::as_str);
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request<_>| {
+                    let request_id = uuid::Uuid::new_v4();
+                    let matched_path = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
 
-                info_span!(
-                    "http_request",
-                    method = ?request.method(),
-                    matched_path,
-                    some_other_field = tracing::field::Empty,
-                    request_id = tracing::field::display(request_id),
-                )
-            }),
+                    info_span!(
+                        "http_request",
+                        method = ?request.method(),
+                        matched_path,
+                        request_id = tracing::field::display(request_id),
+                    )
+                })
+                .on_failure(()),
         )
         .with_state(state);
 
