@@ -1,7 +1,10 @@
 use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    routes::{health_check_handler, subscribe_handler, subscriptions_confirm_handler},
+    routes::{
+        health_check_handler, pubslish_newsletters_handler, subscribe_handler,
+        subscriptions_confirm_handler,
+    },
 };
 use axum::{
     Router,
@@ -44,6 +47,7 @@ pub fn run(
         .route("/health_check", get(health_check_handler))
         .route("/subscriptions", post(subscribe_handler))
         .route("/subscriptions/confirm", get(subscriptions_confirm_handler))
+        .route("/newsletters", post(pubslish_newsletters_handler))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {

@@ -12,7 +12,7 @@ name = "zero2prod"
 
 [dependencies]
 anyhow = "1.0.98"
-axum = {version = "0.8.4", features= ["tokio", "form", "macros", "tracing"]}
+axum = {version = "0.8.4", features= ["tokio", "form", "macros", "tracing", "json"]}
 chrono = "0.4.41"
 config = {version = "0.15.11", features = ["yaml"]}
 rand = {version ="0.9.1", features= ["std_rng"]}
