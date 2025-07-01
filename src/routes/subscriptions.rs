@@ -40,7 +40,7 @@ impl TryFrom<FormData> for NewSubscriber {
         subscriber_name= %form.name
     )
 )]
-#[axum::debug_handler]
+
 pub async fn subscribe_handler(
     State(state): State<AppState>,
     Form(form): Form<FormData>,

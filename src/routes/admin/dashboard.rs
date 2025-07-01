@@ -1,7 +1,7 @@
 use anyhow::Context;
 use axum::{
     extract::State,
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, Redirect},
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -12,7 +12,7 @@ use crate::{routes::session_state::TypedSession, startup::AppState};
 pub async fn admin_dashboard(
     State(state): State<AppState>,
     session: TypedSession,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, Redirect> {
     let username = if let Some(user_id) = session
         .get_user_id()
         .await
@@ -20,10 +20,17 @@ pub async fn admin_dashboard(
     {
         get_username(user_id, &state.pg_pool)
             .await
-            .map_err(|_| "".to_string())
-            .expect("Failed getting username")
+            .map_err(|_| Redirect::to("/login"))
+        // .unwrap_or_default()
     } else {
-        "".to_string()
+        return Err(Redirect::to("/login"));
+    };
+
+    let usernamestring = match username {
+        Ok(username) => username,
+        Err(_) => {
+            return Err(Redirect::to("/login"));
+        }
     };
 
     let body = Html(format!(
@@ -34,12 +41,12 @@ pub async fn admin_dashboard(
             <title>Admin dashboard</title>
         </head>
         <body>
-            <p>Welcome {username}!</p>
+            <p>Welcome {usernamestring}!</p>
         </body>
         </html>"#
     ));
 
-    body
+    Ok(body)
 }
 
 #[tracing::instrument(name = "Get username", skip(pool))]
