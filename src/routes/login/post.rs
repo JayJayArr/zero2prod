@@ -1,9 +1,10 @@
 use axum::{
     Form,
     extract::State,
-    http::{HeaderMap, Response, status::StatusCode},
-    response::IntoResponse,
+    http::status::StatusCode,
+    response::{IntoResponse, Redirect},
 };
+use axum_messages::Messages;
 use secrecy::SecretString;
 use serde::Deserialize;
 
@@ -21,6 +22,7 @@ pub struct FormData {
 #[axum::debug_handler]
 pub async fn login(
     state: State<AppState>,
+    messages: Messages,
     formdata: Form<FormData>,
 ) -> Result<impl IntoResponse, LoginError> {
     let credentials = Credentials {
@@ -33,12 +35,7 @@ pub async fn login(
         Ok(user_id) => {
             tracing::Span::current().record("user_id", tracing::field::display(&user_id));
 
-            let mut headers = HeaderMap::new();
-            headers.insert(
-                "Location",
-                "/".parse().expect("Failed to set location header"),
-            );
-            Ok((StatusCode::SEE_OTHER, headers))
+            Ok(Redirect::to("/login"))
         }
 
         Err(e) => {
@@ -46,16 +43,8 @@ pub async fn login(
                 AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
             };
-            // let response = Response::
-            let mut headers = HeaderMap::new();
-            headers.insert(
-                "Location",
-                "/login".parse().expect("Failed to set location header"),
-            );
-            headers.insert("Set-Cookie", format!("_flash={e}").parse().unwrap());
-
-            Ok((StatusCode::SEE_OTHER, headers))
-            // Err(LoginError::UnexpectedError(e.into()))
+            messages.error(e.to_string());
+            Ok(Redirect::to("/login"))
         }
     }
 }

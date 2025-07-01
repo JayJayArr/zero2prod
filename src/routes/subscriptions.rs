@@ -112,20 +112,17 @@ pub async fn send_confirmation_email(
     subscription_token: &str,
 ) -> Result<(), reqwest::Error> {
     let confirmation_link = format!(
-        "http://{}/subscriptions/confirm?subscription_token={}",
-        base_url, subscription_token
+        "http://{base_url}/subscriptions/confirm?subscription_token={subscription_token}"
     );
 
     let plain_body = &format!(
         "Welcome to our newsletter! \n
-             Visit {} to confirm your subscription.",
-        confirmation_link
+             Visit {confirmation_link} to confirm your subscription."
     );
 
     let html_body = &format!(
         "Welcome to our newsletter!<br /> \
-                Click <a href=\"{}\" here </a> to confirm your subscription.",
-        confirmation_link
+                Click <a href=\"{confirmation_link}\" here </a> to confirm your subscription."
     );
 
     email_client
@@ -183,10 +180,10 @@ pub fn error_chain_fmt(
     e: &impl std::error::Error,
     f: &mut std::fmt::Formatter<'_>,
 ) -> std::fmt::Result {
-    writeln!(f, "{}\n", e)?;
+    writeln!(f, "{e}\n")?;
     let mut current = e.source();
     while let Some(cause) = current {
-        writeln!(f, "Caused by:\n\t{}", cause)?;
+        writeln!(f, "Caused by:\n\t{cause}")?;
         current = cause.source();
     }
     Ok(())

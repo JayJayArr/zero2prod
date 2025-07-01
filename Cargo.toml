@@ -15,6 +15,7 @@ anyhow = "1.0.98"
 argon2 = {version = "0.5.3", features = ["std"]}
 axum = {version = "0.8.4", features= ["tokio", "form", "macros", "tracing", "json"]}
 axum-extra = {version = "0.10.1", features = ["cookie"]}
+axum-messages = "0.8.0"
 chrono = "0.4.41"
 config = {version = "0.15.11", features = ["yaml"]}
 rand = {version ="0.9.1", features= ["std_rng"]}
@@ -25,6 +26,7 @@ serde-aux = "4.7.0"
 thiserror = "2.0.12"
 tokio = {version = "1.45.1", features = ["rt-multi-thread"]}
 tower-http = {version = "0.6.6", features = ["trace", "follow-redirect", "request-id"]}
+tower-sessions = "0.14.0"
 tracing = "0.1.41"
 tracing-bunyan-formatter = "0.3.10"
 tracing-log = "0.2.0"

@@ -64,12 +64,11 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
     //Act
     for (invalid_body, error_message) in test_cases {
         let response = app.post_subscriptions(invalid_body.into()).await;
-        println!("{:?}", response);
+        println!("{response:?}");
         assert_eq!(
             422,
             response.status().as_u16(),
-            "The API did not fail with 400 when the payload was {}.",
-            error_message
+            "The API did not fail with 400 when the payload was {error_message}."
         );
     }
 }
@@ -86,12 +85,11 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
     //Act
     for (invalid_body, error_message) in test_cases {
         let response = app.post_subscriptions(invalid_body.into()).await;
-        println!("{:?}", response);
+        println!("{response:?}");
         assert_eq!(
             400,
             response.status().as_u16(),
-            "The API did not fail with 400 when the payload was {}.",
-            error_message
+            "The API did not fail with 400 when the payload was {error_message}."
         );
     }
 }

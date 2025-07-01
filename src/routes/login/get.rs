@@ -1,18 +1,15 @@
 use axum::response::{Html, IntoResponse};
-use axum_extra::extract::CookieJar;
-use axum_extra::extract::cookie::Cookie;
+use axum_messages::{Level, Messages};
+use std::fmt::Write;
 
 #[axum::debug_handler]
-pub async fn login_form(jar: CookieJar) -> impl IntoResponse {
-    dbg!(&jar);
-    let error_html = match jar.get("_flash") {
-        None => "".into(),
-        Some(cookie) => {
-            format!("<p><i>{}</i></p>", cookie.value())
-        }
-    };
+pub async fn login_form(messages: Messages) -> impl IntoResponse {
+    let mut error_html = String::new();
+    for m in messages.into_iter().filter(|m| m.level == Level::Error) {
+        writeln!(error_html, "<p><i>{m}</i></p>").unwrap();
+    }
 
-    let body = Html(format!(
+    Html(format!(
         r#"<!DOCTYPE html>
             <html lang="en">
             <head>
@@ -40,7 +37,5 @@ pub async fn login_form(jar: CookieJar) -> impl IntoResponse {
                 </form>
             </body>
             </html>"#
-    ));
-
-    (jar.add(Cookie::new("_flash", "")), body)
+    ))
 }

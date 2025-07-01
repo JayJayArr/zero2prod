@@ -12,10 +12,12 @@ use axum::{
     routing::{get, post},
     serve::Serve,
 };
+use axum_messages::MessagesManagerLayer;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
+use tower_sessions::{MemoryStore, SessionManagerLayer};
 use tracing::{info, info_span};
 
 #[derive(Clone, Debug)]
@@ -43,6 +45,10 @@ pub fn run(
         email_client: Arc::new(email_client),
         base_url: Arc::new(ApplicationBaseUrl(base_url)),
     };
+
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store);
+
     let app = Router::new()
         .route("/health_check", get(health_check_handler))
         .route("/subscriptions", post(subscribe_handler))
@@ -68,6 +74,8 @@ pub fn run(
                 })
                 .on_failure(()),
         )
+        .layer(MessagesManagerLayer)
+        .layer(session_layer)
         .with_state(state);
 
     Ok(axum::serve(listener, app))
