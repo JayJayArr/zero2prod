@@ -12,12 +12,15 @@ use axum::{
     routing::{get, post},
     serve::Serve,
 };
+use axum_login::tower_sessions::{Expiry, SessionManagerLayer};
 use axum_messages::MessagesManagerLayer;
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
+use time::Duration;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tower_sessions::{MemoryStore, SessionManagerLayer};
+use tower_sessions_redis_store::{RedisStore, fred::prelude::*};
 use tracing::{info, info_span};
 
 #[derive(Clone, Debug)]
@@ -34,20 +37,29 @@ pub struct Application {
 #[derive(Clone, Debug)]
 pub struct ApplicationBaseUrl(pub String);
 
-pub fn run(
+pub async fn run(
     listener: TcpListener,
     connection: PgPool,
     email_client: EmailClient,
     base_url: String,
-) -> Result<Serve<TcpListener, Router, Router>, std::io::Error> {
+    redis_uri: SecretString,
+) -> Result<Serve<TcpListener, Router, Router>, anyhow::Error> {
     let state = AppState {
         pg_pool: Arc::new(connection),
         email_client: Arc::new(email_client),
         base_url: Arc::new(ApplicationBaseUrl(base_url)),
     };
 
-    let session_store = MemoryStore::default();
-    let session_layer = SessionManagerLayer::new(session_store);
+    //Redis
+    let conf = Config::from_url(redis_uri.expose_secret())?;
+    let pool = Pool::new(conf, None, None, None, 6)?;
+    let _redis_conn = pool.connect();
+    pool.wait_for_connect().await?;
+
+    let session_store = RedisStore::new(pool);
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
 
     let app = Router::new()
         .route("/health_check", get(health_check_handler))
@@ -81,8 +93,28 @@ pub fn run(
     Ok(axum::serve(listener, app))
 }
 
+// async fn shutdown_signal(redis_conn_task_abort_handle: AbortHandle) {
+//     let ctrl_c = async {
+//         signal::ctrl_c()
+//             .await
+//             .expect("failed to install Ctrl+C handler");
+//     };
+//
+//     let terminate = async {
+//         signal(signal::unix::SignalKind::terminate())
+//             .expect("failed to install signal handler")
+//             .recv()
+//             .await;
+//     };
+//
+//     tokio::select! {
+//         _ = ctrl_c => { redis_conn_task_abort_handle.abort() },
+//         _ = terminate => { redis_conn_task_abort_handle.abort() },
+//     }
+// }
+
 impl Application {
-    pub async fn build(configuration: &Settings) -> Result<Self, std::io::Error> {
+    pub async fn build(configuration: &Settings) -> Result<Self, anyhow::Error> {
         let connection_pool = get_connection_pool(&configuration.database);
         let sender_email = configuration
             .email_client
@@ -111,7 +143,9 @@ impl Application {
             connection_pool,
             email_client,
             configuration.application.base_url.clone(),
-        )?;
+            configuration.redis_uri.clone(),
+        )
+        .await?;
         Ok(Self { port, server })
     }
 
