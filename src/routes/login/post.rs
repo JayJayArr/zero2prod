@@ -1,14 +1,14 @@
 use axum::{
     Form,
     extract::State,
-    http::{HeaderMap, status::StatusCode},
+    http::{HeaderMap, Response, status::StatusCode},
     response::IntoResponse,
 };
 use secrecy::SecretString;
 use serde::Deserialize;
 
 use crate::{
-    authentication::{Credentials, validate_credentials},
+    authentication::{AuthError, Credentials, validate_credentials},
     startup::AppState,
 };
 
@@ -41,8 +41,21 @@ pub async fn login(
             Ok((StatusCode::SEE_OTHER, headers))
         }
 
-        Err(_) => {
-            todo!()
+        Err(e) => {
+            let e = match e {
+                AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
+                AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
+            };
+            // let response = Response::
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                "Location",
+                "/login".parse().expect("Failed to set location header"),
+            );
+            headers.insert("Set-Cookie", format!("_flash={e}").parse().unwrap());
+
+            Ok((StatusCode::SEE_OTHER, headers))
+            // Err(LoginError::UnexpectedError(e.into()))
         }
     }
 }
