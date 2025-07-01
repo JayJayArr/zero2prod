@@ -111,9 +111,8 @@ pub async fn send_confirmation_email(
     base_url: &str,
     subscription_token: &str,
 ) -> Result<(), reqwest::Error> {
-    let confirmation_link = format!(
-        "http://{base_url}/subscriptions/confirm?subscription_token={subscription_token}"
-    );
+    let confirmation_link =
+        format!("http://{base_url}/subscriptions/confirm?subscription_token={subscription_token}");
 
     let plain_body = &format!(
         "Welcome to our newsletter! \n
@@ -129,12 +128,6 @@ pub async fn send_confirmation_email(
         .send_email(&new_subscriber.email, "Welcome!", html_body, plain_body)
         .await
 }
-
-// pub fn parse_subscriber(form: FormData) -> Result<NewSubscriber, String> {
-//     let name = SubscriberName::parse(form.name)?;
-//     let email = SubscriberEmail::parse(form.email)?;
-//     Ok(NewSubscriber { email, name })
-// }
 
 fn generate_subscription_token() -> String {
     let mut rng = rand::rng();
