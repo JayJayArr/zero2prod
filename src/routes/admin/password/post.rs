@@ -1,9 +1,14 @@
-use axum::Form;
+use axum::{Form, extract::State};
+use axum_messages::Messages;
 use reqwest::StatusCode;
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 
-use crate::routes::{PasswordError, session_state::TypedSession};
+use crate::{
+    authentication::{AuthError, Credentials, validate_credentials},
+    routes::{PasswordError, get_username, session_state::TypedSession},
+    startup::AppState,
+};
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -14,17 +19,43 @@ pub struct FormData {
 
 #[axum::debug_handler]
 pub async fn change_password(
+    messages: Messages,
     session: TypedSession,
+    State(state): State<AppState>,
     Form(form): Form<FormData>,
 ) -> Result<StatusCode, PasswordError> {
-    if session
+    let user_id = session
         .get_user_id()
         .await
-        .map_err(|e| PasswordError::UnexpectedError(e.into()))?
-        .is_none()
-    {
-        return Err(PasswordError::Unauthenticated("".into()));
+        .map_err(|e| PasswordError::UnexpectedError(e.into()))?;
+    if let Some(userid) = user_id {
+        let username = get_username(userid, &state.pg_pool).await?;
+        let credentials = Credentials {
+            username,
+            password: form.current_password,
+        };
+
+        if form.new_password.expose_secret() != form.new_password_check.expose_secret() {
+            messages
+                .error("You entered two different new passwords - the field values must match.");
+            return Err(PasswordError::ValidationError(
+                "passwords don't match".to_string(),
+            ));
+        }
+        if let Err(e) = validate_credentials(credentials, &state.pg_pool).await {
+            return match e {
+                AuthError::InvalidCredentials(_) => {
+                    messages.error("The current password is incorrect.");
+
+                    Err(PasswordError::ValidationError(
+                        "passwords don't match".to_string(),
+                    ))
+                }
+                AuthError::UnexpectedError(e) => Err(PasswordError::UnexpectedError(e)),
+            };
+        }
+        Ok(StatusCode::OK)
     } else {
-        todo!()
+        return Err(PasswordError::Unauthenticated("".into()));
     }
 }

@@ -21,7 +21,6 @@ pub async fn admin_dashboard(
         get_username(user_id, &state.pg_pool)
             .await
             .map_err(|_| Redirect::to("/login"))
-        // .unwrap_or_default()
     } else {
         return Err(Redirect::to("/login"));
     };
@@ -42,6 +41,10 @@ pub async fn admin_dashboard(
         </head>
         <body>
             <p>Welcome {usernamestring}!</p>
+            <p>Available actions:</p>
+            <ol>
+                <li><a href="/admin/password">Change password</a></li>
+            </ol>
         </body>
         </html>"#
     ));
@@ -50,7 +53,7 @@ pub async fn admin_dashboard(
 }
 
 #[tracing::instrument(name = "Get username", skip(pool))]
-async fn get_username(user_id: Uuid, pool: &PgPool) -> Result<String, anyhow::Error> {
+pub async fn get_username(user_id: Uuid, pool: &PgPool) -> Result<String, anyhow::Error> {
     let row = sqlx::query!(
         r#"
         SELECT username

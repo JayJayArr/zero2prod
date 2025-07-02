@@ -1,18 +1,26 @@
 use axum::response::{Html, IntoResponse};
+use axum_messages::Messages;
+use std::fmt::Write;
 
 use crate::routes::{PasswordError, session_state::TypedSession};
 
 pub async fn change_password_form(
+    messages: Messages,
     session: TypedSession,
 ) -> Result<impl IntoResponse, PasswordError> {
     let userid = session
         .get_user_id()
         .await
         .map_err(|e| PasswordError::UnexpectedError(e.into()))?;
-    dbg!(&userid);
+
+    let mut msg_html = String::new();
+    for m in messages.into_iter() {
+        writeln!(msg_html, "<p><i>{m}</i></p>").unwrap();
+    }
+
     if userid.is_some() {
         dbg!("session not found");
-        Ok(Html({
+        Ok(Html(format!(
             r#"<!DOCTYPE html>
             <html lang="en">
             <head>
@@ -20,6 +28,7 @@ pub async fn change_password_form(
                 <title>Change Password</title>
             </head>
             <body>
+                {msg_html}
                 <form action="/admin/password" method="post">
                     <label>Current password
                         <input
@@ -50,7 +59,7 @@ pub async fn change_password_form(
                 <p><a href="/admin/dashboard">&lt;- Back</a></p>
             </body>
             </html>"#
-        }))
+        )))
     } else {
         Err(PasswordError::Unauthenticated("please log in".to_string()))
     }

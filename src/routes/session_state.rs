@@ -1,7 +1,6 @@
 use anyhow::Result;
 use axum::{extract::FromRequestParts, http::request::Parts, response::Redirect};
 use axum_login::tower_sessions::Session;
-use reqwest::StatusCode;
 use uuid::Uuid;
 
 #[derive(Debug)]

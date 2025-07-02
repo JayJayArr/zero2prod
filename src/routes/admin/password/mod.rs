@@ -9,9 +9,7 @@ use reqwest::StatusCode;
 impl IntoResponse for PasswordError {
     fn into_response(self) -> Response {
         match self {
-            PasswordError::ValidationError(rejection) => {
-                (StatusCode::BAD_REQUEST, rejection).into_response()
-            }
+            PasswordError::ValidationError(_) => Redirect::to("/admin/password").into_response(),
             PasswordError::UnexpectedError(err) => {
                 tracing::error!("{:?}", err);
 
