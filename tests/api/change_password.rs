@@ -100,3 +100,65 @@ async fn current_password_must_be_valid() {
 
     assert!(html_page.contains("<p><i>The current password is incorrect.</i></p>"))
 }
+
+#[tokio::test]
+async fn new_password_must_be_longer_than_12_graphemes() {
+    //Arrange
+    let app = spawn_app().await;
+    let new_password = "123456789012";
+
+    //Act - login
+    app.post_login(&serde_json::json!({
+        "username" : &app.test_user.username,
+        "password" : &app.test_user.password
+    }))
+    .await;
+
+    //Act - try to change password
+    let response = app
+        .post_change_password(&serde_json::json!({
+            "current_password": &app.test_user.password,
+            "new_password": &new_password,
+            "new_password_check": &new_password,
+        }))
+        .await;
+
+    //Assert
+    assert_is_redirect_to(&response, "/admin/password");
+
+    //Act - follow the redirect
+    let html_page = app.get_change_password_html().await;
+
+    assert!(html_page.contains("<p><i>Password lenght must be > 12  and < 128</i></p>"))
+}
+
+#[tokio::test]
+async fn new_password_must_be_shorter_than_128_graphemes() {
+    //Arrange
+    let app = spawn_app().await;
+    let new_password = "x".repeat(128);
+
+    //Act - login
+    app.post_login(&serde_json::json!({
+        "username" : &app.test_user.username,
+        "password" : &app.test_user.password
+    }))
+    .await;
+
+    //Act - try to change password
+    let response = app
+        .post_change_password(&serde_json::json!({
+            "current_password": &app.test_user.password,
+            "new_password": &new_password,
+            "new_password_check": &new_password,
+        }))
+        .await;
+
+    //Assert
+    assert_is_redirect_to(&response, "/admin/password");
+
+    //Act - follow the redirect
+    let html_page = app.get_change_password_html().await;
+
+    assert!(html_page.contains("<p><i>Password lenght must be > 12  and < 128</i></p>"))
+}

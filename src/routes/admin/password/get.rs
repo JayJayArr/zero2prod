@@ -19,7 +19,6 @@ pub async fn change_password_form(
     }
 
     if userid.is_some() {
-        dbg!("session not found");
         Ok(Html(format!(
             r#"<!DOCTYPE html>
             <html lang="en">

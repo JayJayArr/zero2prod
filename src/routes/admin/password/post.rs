@@ -1,6 +1,5 @@
-use axum::{Form, extract::State};
+use axum::{Form, extract::State, response::Redirect};
 use axum_messages::Messages;
-use reqwest::StatusCode;
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 
@@ -23,7 +22,7 @@ pub async fn change_password(
     session: TypedSession,
     State(state): State<AppState>,
     Form(form): Form<FormData>,
-) -> Result<StatusCode, PasswordError> {
+) -> Result<Redirect, PasswordError> {
     let user_id = session
         .get_user_id()
         .await
@@ -42,19 +41,29 @@ pub async fn change_password(
                 "passwords don't match".to_string(),
             ));
         }
+
+        if form.new_password.expose_secret().len() <= 12
+            || form.new_password.expose_secret().len() >= 128
+        {
+            messages.error("Password lenght must be > 12  and < 128");
+            return Err(PasswordError::ValidationError(
+                "password length invalid".to_string(),
+            ));
+        }
         if let Err(e) = validate_credentials(credentials, &state.pg_pool).await {
             return match e {
                 AuthError::InvalidCredentials(_) => {
                     messages.error("The current password is incorrect.");
 
                     Err(PasswordError::ValidationError(
-                        "passwords don't match".to_string(),
+                        "credentials invalid".to_string(),
                     ))
                 }
                 AuthError::UnexpectedError(e) => Err(PasswordError::UnexpectedError(e)),
             };
         }
-        Ok(StatusCode::OK)
+        messages.error("Your password has been changed.");
+        Ok(Redirect::to("/admin/password"))
     } else {
         return Err(PasswordError::Unauthenticated("".into()));
     }
