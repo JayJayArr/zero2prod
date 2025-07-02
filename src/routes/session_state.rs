@@ -1,5 +1,5 @@
 use anyhow::Result;
-use axum::{extract::FromRequestParts, http::request::Parts};
+use axum::{extract::FromRequestParts, http::request::Parts, response::Redirect};
 use axum_login::tower_sessions::Session;
 use reqwest::StatusCode;
 use uuid::Uuid;
@@ -32,15 +32,16 @@ impl<S> FromRequestParts<S> for TypedSession
 where
     S: Send + Sync,
 {
-    type Rejection = (StatusCode, &'static str);
+    type Rejection = Redirect;
 
     async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let session = Session::from_request_parts(req, state).await?;
-        let user_id: Uuid = session
-            .get(Self::USER_ID_KEY)
+        let session = Session::from_request_parts(req, state)
             .await
-            .unwrap()
-            .unwrap_or_default();
+            .map_err(|_| Redirect::to("/login"))?;
+        let user_id: Uuid = match session.get(Self::USER_ID_KEY).await.unwrap() {
+            Some(id) => id,
+            None => return Err(Redirect::to("/login")),
+        };
         session.insert(Self::USER_ID_KEY, user_id).await.unwrap();
 
         Ok(Self(session))

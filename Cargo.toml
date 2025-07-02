@@ -20,7 +20,7 @@ axum-messages = "0.8.0"
 chrono = "0.4.41"
 config = {version = "0.15.11", features = ["yaml"]}
 rand = {version ="0.9.1", features= ["std_rng"]}
-reqwest = {version = "0.12.20", features = ["json", "rustls-tls", "cookies"]}
+reqwest = {version = "0.12.21", features = ["json", "rustls-tls", "cookies"]}
 secrecy = {version= "0.10.3", features = ["serde"]}
 serde = {version ="1.0.219", features= ["derive"]}
 serde-aux = "4.7.0"
