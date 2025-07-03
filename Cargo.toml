@@ -20,14 +20,14 @@ axum-messages = "0.8.0"
 chrono = "0.4.41"
 config = {version = "0.15.11", features = ["yaml"]}
 rand = {version ="0.9.1", features= ["std_rng"]}
-reqwest = {version = "0.12.21", features = ["json", "rustls-tls", "cookies"]}
+reqwest = {version = "0.12.22", features = ["json", "rustls-tls", "cookies"]}
 secrecy = {version= "0.10.3", features = ["serde"]}
 serde = {version ="1.0.219", features= ["derive"]}
 serde-aux = "4.7.0"
 serde_json = "1.0.140"
 thiserror = "2.0.12"
 time = "0.3.41"
-tokio = {version = "1.45.1", features = ["rt-multi-thread", "signal"]}
+tokio = {version = "1.46.0", features = ["rt-multi-thread", "signal"]}
 tower-http = {version = "0.6.6", features = ["trace", "follow-redirect", "request-id"]}
 tower-sessions-redis-store = {version = "0.16.0", features = ["enable-rustls"]}
 tracing = "0.1.41"
