@@ -65,6 +65,6 @@ pub async fn change_password(
         messages.error("Your password has been changed.");
         Ok(Redirect::to("/admin/password"))
     } else {
-        return Err(PasswordError::Unauthenticated("".into()));
+        Err(PasswordError::Unauthenticated("".into()))
     }
 }
