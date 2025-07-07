@@ -136,7 +136,7 @@ impl TestApp {
     pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
         self.api_client
             .post(format!("{}/admin/newsletters", &self.address))
-            .json(&body)
+            .form(&body)
             .send()
             .await
             .expect("Failed to execute request")
@@ -208,6 +208,21 @@ impl TestApp {
             .await
             .expect("failed to execute request.")
     }
+
+    pub async fn get_newsletter(&self) -> reqwest::Response {
+        self.api_client
+            .get(format!("{}/admin/newsletters", &self.address))
+            .send()
+            .await
+            .expect("failed to execute request.")
+    }
+    pub async fn get_newsletter_html(&self) -> String {
+        self.get_newsletter()
+            .await
+            .text()
+            .await
+            .expect("failed to execure request.")
+    }
 }
 
 pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
@@ -235,13 +250,13 @@ impl TestUser {
         }
     }
 
-    // pub async fn login(&self, app: &TestApp) {
-    //     app.post_login(&serde_json::json!({
-    //         "username": &self.username,
-    //         "password": &self.password
-    //     }))
-    //     .await;
-    // }
+    pub async fn login(&self, app: &TestApp) {
+        app.post_login(&serde_json::json!({
+            "username": &self.username,
+            "password": &self.password
+        }))
+        .await;
+    }
 
     async fn store(&self, pool: &PgPool) {
         let salt = SaltString::generate(&mut OsRng);

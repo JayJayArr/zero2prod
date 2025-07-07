@@ -3,8 +3,8 @@ use crate::{
     email_client::EmailClient,
     routes::{
         admin_dashboard, change_password_form, health_check_handler, home, log_out, login,
-        login_form, post_change_password, pubslish_newsletters_handler, subscribe_handler,
-        subscriptions_confirm_handler,
+        login_form, post_change_password, publish_newsletters_form, publish_newsletters_handler,
+        subscribe_handler, subscriptions_confirm_handler,
     },
 };
 use axum::{
@@ -73,7 +73,10 @@ pub async fn run(
                     get(change_password_form).post(post_change_password),
                 )
                 .route("/logout", post(log_out))
-                .route("/newsletters", post(pubslish_newsletters_handler)),
+                .route(
+                    "/newsletters",
+                    get(publish_newsletters_form).post(publish_newsletters_handler),
+                ),
         )
         .route("/health_check", get(health_check_handler))
         .route("/login", get(login_form).post(login))

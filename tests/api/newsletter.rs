@@ -11,13 +11,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     create_unconfirmed_subscriber(&app).await;
 
     //Act - login
-    let response = app
-        .post_login(&serde_json::json!({
-            "username" : &app.test_user.username,
-            "password" : &app.test_user.password
-        }))
-        .await;
-    assert_is_redirect_to(&response, "/admin/dashboard");
+    app.test_user.login(&app).await;
 
     Mock::given(any())
         .respond_with(ResponseTemplate::new(200))
@@ -27,10 +21,8 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
 
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
-        "content": {
-            "text": "Newsletter body as plain text",
-            "html": "<p>Newsletter body as HTML</p>"
-        }
+        "text": "Newsletter body as plain text",
+        "html": "<p>Newsletter body as HTML</p>"
     });
 
     let response = app.post_newsletters(newsletter_request_body).await;
@@ -44,13 +36,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     create_confirmed_subscriber(&app).await;
 
     //Act - login
-    let response = app
-        .post_login(&serde_json::json!({
-            "username" : &app.test_user.username,
-            "password" : &app.test_user.password
-        }))
-        .await;
-    assert_is_redirect_to(&response, "/admin/dashboard");
+    app.test_user.login(&app).await;
 
     Mock::given(path("/email"))
         .and(method("POST"))
@@ -61,10 +47,8 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
 
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
-        "content": {
             "text": "Newsletter body as plain text",
             "html": "<p>Newsletter body as HTML</p>"
-        }
     });
 
     let response = app.post_newsletters(newsletter_request_body).await;
@@ -77,21 +61,14 @@ async fn newsletters_returns_400_for_invalid_data() {
     let app = spawn_app().await;
 
     //Act - login
-    let response = app
-        .post_login(&serde_json::json!({
-            "username" : &app.test_user.username,
-            "password" : &app.test_user.password
-        }))
-        .await;
-    assert_is_redirect_to(&response, "/admin/dashboard");
+    app.test_user.login(&app).await;
 
     let test_cases = vec![
         (
             (serde_json::json!({
-            "content": {
                 "text": "Newsletter body as plain text",
                 "html": "<p>Newsletter body as HTML</p>"
-            }}
+            }
             )),
             "missing title",
         ),
@@ -112,6 +89,29 @@ async fn newsletters_returns_400_for_invalid_data() {
             "The API did not fail with 400 Bad Request when the payload was {error_message}."
         );
     }
+}
+
+#[tokio::test]
+async fn you_have_to_be_logged_in_to_post_a_newsletter() {
+    let app = spawn_app().await;
+    //Act
+    let newsletter_request_body = serde_json::json!({
+        "title": "Newsletter title",
+            "text": "Newsletter body as plain text",
+            "html": "<p>Newsletter body as HTML</p>"
+    });
+    //Assert
+    let response = app.post_newsletters(newsletter_request_body).await;
+    assert_is_redirect_to(&response, "/login");
+}
+
+#[tokio::test]
+async fn you_have_to_be_logged_in_to_view_the_post_site() {
+    let app = spawn_app().await;
+    //Act
+    let response = app.get_newsletter().await;
+    //Assert
+    assert_is_redirect_to(&response, "/login");
 }
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {

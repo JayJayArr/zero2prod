@@ -1,10 +1,11 @@
 use anyhow::Context;
 use axum::{
-    Json,
+    Form,
     extract::State,
     http::status::StatusCode,
     response::{IntoResponse, Response},
 };
+use axum_messages::Messages;
 use serde::Deserialize;
 use sqlx::PgPool;
 
@@ -13,11 +14,6 @@ use crate::{domain::SubscriberEmail, routes::session_state::TypedSession, startu
 #[derive(Deserialize)]
 pub struct BodyData {
     title: String,
-    content: Content,
-}
-
-#[derive(Deserialize)]
-pub struct Content {
     html: String,
     text: String,
 }
@@ -34,11 +30,15 @@ pub enum PublishError {
     Unauthenticated(String),
 }
 
-#[tracing::instrument(name = "Publishing new newsletter", skip(session, state, body))]
-pub async fn pubslish_newsletters_handler(
+#[tracing::instrument(
+    name = "Publishing new newsletter",
+    skip(session, messages, state, body)
+)]
+pub async fn publish_newsletters_handler(
     session: TypedSession,
+    messages: Messages,
     state: State<AppState>,
-    body: Json<BodyData>,
+    body: Form<BodyData>,
 ) -> Result<impl IntoResponse, PublishError> {
     if session
         .get_user_id()
@@ -53,12 +53,7 @@ pub async fn pubslish_newsletters_handler(
                 Ok(subscriber) => {
                     state
                         .email_client
-                        .send_email(
-                            &subscriber.email,
-                            &body.title,
-                            &body.content.html,
-                            &body.content.text,
-                        )
+                        .send_email(&subscriber.email, &body.title, &body.html, &body.text)
                         .await
                         .with_context(|| {
                             format!("Failed to send newsletter issue to {}", subscriber.email)
@@ -73,6 +68,7 @@ pub async fn pubslish_newsletters_handler(
                 }
             }
         }
+        messages.info("The newsletter has been published");
         return Ok(StatusCode::OK);
     } else {
         return Err(PublishError::Unauthenticated("Please log in.".into()));
