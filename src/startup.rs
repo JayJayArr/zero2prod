@@ -2,8 +2,9 @@ use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
     routes::{
-        admin_dashboard, change_password, change_password_form, health_check_handler, home, login,
-        login_form, pubslish_newsletters_handler, subscribe_handler, subscriptions_confirm_handler,
+        admin_dashboard, change_password, change_password_form, health_check_handler, home,
+        log_out, login, login_form, pubslish_newsletters_handler, subscribe_handler,
+        subscriptions_confirm_handler,
     },
 };
 use axum::{
@@ -73,6 +74,7 @@ pub async fn run(
             "/admin/password",
             get(change_password_form).post(change_password),
         )
+        .route("/admin/logout", post(log_out))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {

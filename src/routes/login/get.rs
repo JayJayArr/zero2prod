@@ -1,11 +1,11 @@
 use axum::response::{Html, IntoResponse};
-use axum_messages::{Level, Messages};
+use axum_messages::Messages;
 use std::fmt::Write;
 
 #[axum::debug_handler]
 pub async fn login_form(messages: Messages) -> impl IntoResponse {
     let mut error_html = String::new();
-    for m in messages.into_iter().filter(|m| m.level == Level::Error) {
+    for m in messages.into_iter() {
         writeln!(error_html, "<p><i>{m}</i></p>").unwrap();
     }
 

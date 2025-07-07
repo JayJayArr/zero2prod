@@ -25,6 +25,11 @@ impl TypedSession {
     ) -> Result<Option<Uuid>, axum_login::tower_sessions::session::Error> {
         self.0.get(Self::USER_ID_KEY).await
     }
+    pub async fn log_out(
+        &self,
+    ) -> Result<Option<Uuid>, axum_login::tower_sessions::session::Error> {
+        self.0.remove(Self::USER_ID_KEY).await
+    }
 }
 
 impl<S> FromRequestParts<S> for TypedSession

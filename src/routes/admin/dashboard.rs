@@ -8,7 +8,6 @@ use uuid::Uuid;
 
 use crate::{routes::session_state::TypedSession, startup::AppState};
 
-#[axum::debug_handler]
 pub async fn admin_dashboard(
     State(state): State<AppState>,
     session: TypedSession,
@@ -44,6 +43,11 @@ pub async fn admin_dashboard(
             <p>Available actions:</p>
             <ol>
                 <li><a href="/admin/password">Change password</a></li>
+                <li>
+                    <form name="logoutForm" action="/admin/logout" method="post">
+                        <input type="submit" value"Logout">
+                    </form>
+                </li>
             </ol>
         </body>
         </html>"#

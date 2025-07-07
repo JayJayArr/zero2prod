@@ -194,11 +194,19 @@ impl TestApp {
             .form(body)
             .send()
             .await
-            .expect("Failed to execute request.")
+            .expect("failed to execute request.")
     }
 
     pub async fn get_change_password_html(&self) -> String {
         self.get_change_password().await.text().await.unwrap()
+    }
+
+    pub async fn post_logout(&self) -> reqwest::Response {
+        self.api_client
+            .post(format!("{}/admin/logout", &self.address))
+            .send()
+            .await
+            .expect("failed to execute request.")
     }
 }
 
