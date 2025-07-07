@@ -62,6 +62,6 @@ pub async fn publish_newsletters_form(
         );
         Ok(body)
     } else {
-        return Err(PublishError::Unauthenticated("Please log in.".into()));
+        Err(PublishError::Unauthenticated("Please log in.".into()))
     }
 }

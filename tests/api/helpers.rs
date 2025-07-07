@@ -216,13 +216,13 @@ impl TestApp {
             .await
             .expect("failed to execute request.")
     }
-    pub async fn get_newsletter_html(&self) -> String {
-        self.get_newsletter()
-            .await
-            .text()
-            .await
-            .expect("failed to execure request.")
-    }
+    // pub async fn get_newsletter_html(&self) -> String {
+    //     self.get_newsletter()
+    //         .await
+    //         .text()
+    //         .await
+    //         .expect("failed to execure request.")
+    // }
 }
 
 pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
