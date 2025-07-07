@@ -63,18 +63,22 @@ pub async fn run(
         .with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
 
     let app = Router::new()
+        .route("/", get(home))
+        .nest(
+            "/admin",
+            Router::new()
+                .route("/dashboard", get(admin_dashboard))
+                .route(
+                    "/password",
+                    get(change_password_form).post(post_change_password),
+                )
+                .route("/logout", post(log_out)),
+        )
         .route("/health_check", get(health_check_handler))
+        .route("/login", get(login_form).post(login))
+        .route("/newsletters", post(pubslish_newsletters_handler))
         .route("/subscriptions", post(subscribe_handler))
         .route("/subscriptions/confirm", get(subscriptions_confirm_handler))
-        .route("/newsletters", post(pubslish_newsletters_handler))
-        .route("/", get(home))
-        .route("/login", get(login_form).post(login))
-        .route("/admin/dashboard", get(admin_dashboard))
-        .route(
-            "/admin/password",
-            get(change_password_form).post(post_change_password),
-        )
-        .route("/admin/logout", post(log_out))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {
@@ -99,26 +103,6 @@ pub async fn run(
 
     Ok(axum::serve(listener, app))
 }
-
-// async fn shutdown_signal(redis_conn_task_abort_handle: AbortHandle) {
-//     let ctrl_c = async {
-//         signal::ctrl_c()
-//             .await
-//             .expect("failed to install Ctrl+C handler");
-//     };
-//
-//     let terminate = async {
-//         signal(signal::unix::SignalKind::terminate())
-//             .expect("failed to install signal handler")
-//             .recv()
-//             .await;
-//     };
-//
-//     tokio::select! {
-//         _ = ctrl_c => { redis_conn_task_abort_handle.abort() },
-//         _ = terminate => { redis_conn_task_abort_handle.abort() },
-//     }
-// }
 
 impl Application {
     pub async fn build(configuration: &Settings) -> Result<Self, anyhow::Error> {
