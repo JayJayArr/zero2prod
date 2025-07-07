@@ -3,19 +3,25 @@ use axum::{
     Form,
     extract::State,
     http::status::StatusCode,
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
 };
 use axum_messages::Messages;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::{domain::SubscriberEmail, routes::session_state::TypedSession, startup::AppState};
+use crate::{
+    domain::SubscriberEmail,
+    idempotency::{IdempotencyKey, get_saved_response},
+    routes::session_state::TypedSession,
+    startup::AppState,
+};
 
 #[derive(Deserialize)]
-pub struct BodyData {
+pub struct FormData {
     title: String,
     html: String,
     text: String,
+    idempotency_key: String,
 }
 
 pub struct ConfirmedSubscriber {
@@ -28,24 +34,36 @@ pub enum PublishError {
     UnexpectedError(#[from] anyhow::Error),
     #[error("{0}")]
     Unauthenticated(String),
+    #[error("{0}")]
+    ValidationError(String),
 }
 
 #[tracing::instrument(
     name = "Publishing new newsletter",
-    skip(session, messages, state, body)
+    skip(session, messages, state, form)
 )]
 pub async fn publish_newsletters_handler(
     session: TypedSession,
     messages: Messages,
     state: State<AppState>,
-    body: Form<BodyData>,
+    form: Form<FormData>,
 ) -> Result<impl IntoResponse, PublishError> {
-    if session
+    if let Some(user_id) = session
         .get_user_id()
         .await
         .expect("failed to get user_id from session.")
-        .is_some()
     {
+        let idempotency_key: IdempotencyKey = form
+            .idempotency_key
+            .clone()
+            .try_into()
+            .map_err(|e: anyhow::Error| PublishError::ValidationError(e.to_string()))?;
+        if let Some(saved_response) = get_saved_response(&state.pg_pool, &idempotency_key, user_id)
+            .await
+            .map_err(|e| PublishError::ValidationError(e.to_string()))?
+        {
+            return Ok(saved_response);
+        }
         let subscribers = get_confirmed_subscribers(&state.pg_pool).await?;
 
         for subscriber in subscribers {
@@ -53,7 +71,7 @@ pub async fn publish_newsletters_handler(
                 Ok(subscriber) => {
                     state
                         .email_client
-                        .send_email(&subscriber.email, &body.title, &body.html, &body.text)
+                        .send_email(&subscriber.email, &form.title, &form.html, &form.text)
                         .await
                         .with_context(|| {
                             format!("Failed to send newsletter issue to {}", subscriber.email)
@@ -68,8 +86,8 @@ pub async fn publish_newsletters_handler(
                 }
             }
         }
-        messages.info("The newsletter has been published");
-        return Ok(StatusCode::OK);
+        messages.info("The newsletter issue has been published!");
+        Ok(Redirect::to("/admin/newsletters").into_response())
     } else {
         return Err(PublishError::Unauthenticated("Please log in.".into()));
     }
@@ -104,6 +122,7 @@ impl IntoResponse for PublishError {
                 )
             }
             PublishError::Unauthenticated(e) => (StatusCode::UNAUTHORIZED, e),
+            PublishError::ValidationError(e) => (StatusCode::BAD_REQUEST, e.to_string()),
         };
 
         (status, message).into_response()

@@ -19,7 +19,6 @@ pub async fn subscriptions_confirm_handler(
     State(state): State<AppState>,
     parameters: Query<Parameters>,
 ) -> impl IntoResponse {
-    dbg!(&parameters);
     let id =
         match get_subscriber_id_from_token(&state.pg_pool, &parameters.subscription_token).await {
             Ok(id) => id,

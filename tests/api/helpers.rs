@@ -133,7 +133,7 @@ impl TestApp {
         }
     }
 
-    pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
+    pub async fn post_newsletters(&self, body: &serde_json::Value) -> reqwest::Response {
         self.api_client
             .post(format!("{}/admin/newsletters", &self.address))
             .form(&body)
@@ -216,13 +216,13 @@ impl TestApp {
             .await
             .expect("failed to execute request.")
     }
-    // pub async fn get_newsletter_html(&self) -> String {
-    //     self.get_newsletter()
-    //         .await
-    //         .text()
-    //         .await
-    //         .expect("failed to execure request.")
-    // }
+    pub async fn get_newsletter_html(&self) -> String {
+        self.get_newsletter()
+            .await
+            .text()
+            .await
+            .expect("failed to execure request.")
+    }
 }
 
 pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
