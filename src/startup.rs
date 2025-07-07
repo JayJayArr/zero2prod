@@ -2,8 +2,8 @@ use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
     routes::{
-        admin_dashboard, change_password, change_password_form, health_check_handler, home,
-        log_out, login, login_form, pubslish_newsletters_handler, subscribe_handler,
+        admin_dashboard, change_password_form, health_check_handler, home, log_out, login,
+        login_form, post_change_password, pubslish_newsletters_handler, subscribe_handler,
         subscriptions_confirm_handler,
     },
 };
@@ -72,7 +72,7 @@ pub async fn run(
         .route("/admin/dashboard", get(admin_dashboard))
         .route(
             "/admin/password",
-            get(change_password_form).post(change_password),
+            get(change_password_form).post(post_change_password),
         )
         .route("/admin/logout", post(log_out))
         .layer(

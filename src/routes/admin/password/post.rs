@@ -3,6 +3,7 @@ use axum_messages::Messages;
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 
+use crate::authentication::change_password;
 use crate::{
     authentication::{AuthError, Credentials, validate_credentials},
     routes::{PasswordError, get_username, session_state::TypedSession},
@@ -16,8 +17,8 @@ pub struct FormData {
     new_password_check: SecretString,
 }
 
-#[axum::debug_handler]
-pub async fn change_password(
+#[tracing::instrument(name = "Change password", skip(state, form, messages, session))]
+pub async fn post_change_password(
     messages: Messages,
     session: TypedSession,
     State(state): State<AppState>,
@@ -45,7 +46,7 @@ pub async fn change_password(
         if form.new_password.expose_secret().len() <= 12
             || form.new_password.expose_secret().len() >= 128
         {
-            messages.error("Password lenght must be > 12  and < 128");
+            messages.error("Password length must be > 12  and < 128");
             return Err(PasswordError::ValidationError(
                 "password length invalid".to_string(),
             ));
@@ -63,6 +64,9 @@ pub async fn change_password(
             };
         }
         messages.error("Your password has been changed.");
+        change_password(userid, form.new_password, &state.pg_pool)
+            .await
+            .map_err(PasswordError::UnexpectedError)?;
         Ok(Redirect::to("/admin/password"))
     } else {
         Err(PasswordError::Unauthenticated("".into()))

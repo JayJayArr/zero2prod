@@ -3,7 +3,7 @@ mod post;
 
 use axum::response::{IntoResponse, Redirect, Response};
 pub use get::change_password_form;
-pub use post::change_password;
+pub use post::post_change_password;
 use reqwest::StatusCode;
 
 impl IntoResponse for PasswordError {
