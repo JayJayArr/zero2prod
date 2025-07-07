@@ -8,7 +8,7 @@ use axum::{
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::{domain::SubscriberEmail, startup::AppState};
+use crate::{domain::SubscriberEmail, routes::session_state::TypedSession, startup::AppState};
 
 #[derive(Deserialize)]
 pub struct BodyData {
@@ -30,41 +30,53 @@ pub struct ConfirmedSubscriber {
 pub enum PublishError {
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
+    #[error("{0}")]
+    Unauthenticated(String),
 }
 
-#[tracing::instrument(name = "Publishing new newsletter", skip(state, body))]
+#[tracing::instrument(name = "Publishing new newsletter", skip(session, state, body))]
 pub async fn pubslish_newsletters_handler(
+    session: TypedSession,
     state: State<AppState>,
     body: Json<BodyData>,
-) -> Result<(), PublishError> {
-    let subscribers = get_confirmed_subscribers(&state.pg_pool).await?;
+) -> Result<impl IntoResponse, PublishError> {
+    if session
+        .get_user_id()
+        .await
+        .expect("failed to get user_id from session.")
+        .is_some()
+    {
+        let subscribers = get_confirmed_subscribers(&state.pg_pool).await?;
 
-    for subscriber in subscribers {
-        match subscriber {
-            Ok(subscriber) => {
-                state
-                    .email_client
-                    .send_email(
-                        &subscriber.email,
-                        &body.title,
-                        &body.content.html,
-                        &body.content.text,
-                    )
-                    .await
-                    .with_context(|| {
-                        format!("Failed to send newsletter issue to {}", subscriber.email)
-                    })?;
-            }
-            Err(error) => {
-                tracing::warn!(
-                    "Skipping a confirmed subscriber. \
+        for subscriber in subscribers {
+            match subscriber {
+                Ok(subscriber) => {
+                    state
+                        .email_client
+                        .send_email(
+                            &subscriber.email,
+                            &body.title,
+                            &body.content.html,
+                            &body.content.text,
+                        )
+                        .await
+                        .with_context(|| {
+                            format!("Failed to send newsletter issue to {}", subscriber.email)
+                        })?;
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        "Skipping a confirmed subscriber. \
                     Their stored contact details are invalid: {}",
-                    error
-                );
+                        error
+                    );
+                }
             }
         }
+        return Ok(StatusCode::OK);
+    } else {
+        return Err(PublishError::Unauthenticated("Please log in.".into()));
     }
-    Ok(())
 }
 
 #[tracing::instrument(name = "Get confirmed subscribers", skip(pool))]
@@ -95,6 +107,7 @@ impl IntoResponse for PublishError {
                     "Something went wrong".to_owned(),
                 )
             }
+            PublishError::Unauthenticated(e) => (StatusCode::UNAUTHORIZED, e),
         };
 
         (status, message).into_response()

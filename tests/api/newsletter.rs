@@ -3,12 +3,21 @@ use wiremock::{
     matchers::{any, method, path},
 };
 
-use crate::helpers::{ConfirmationLinks, TestApp, spawn_app};
+use crate::helpers::{ConfirmationLinks, TestApp, assert_is_redirect_to, spawn_app};
 
 #[tokio::test]
 async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     let app = spawn_app().await;
     create_unconfirmed_subscriber(&app).await;
+
+    //Act - login
+    let response = app
+        .post_login(&serde_json::json!({
+            "username" : &app.test_user.username,
+            "password" : &app.test_user.password
+        }))
+        .await;
+    assert_is_redirect_to(&response, "/admin/dashboard");
 
     Mock::given(any())
         .respond_with(ResponseTemplate::new(200))
@@ -34,6 +43,15 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     let app = spawn_app().await;
     create_confirmed_subscriber(&app).await;
 
+    //Act - login
+    let response = app
+        .post_login(&serde_json::json!({
+            "username" : &app.test_user.username,
+            "password" : &app.test_user.password
+        }))
+        .await;
+    assert_is_redirect_to(&response, "/admin/dashboard");
+
     Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
@@ -57,6 +75,16 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
 #[tokio::test]
 async fn newsletters_returns_400_for_invalid_data() {
     let app = spawn_app().await;
+
+    //Act - login
+    let response = app
+        .post_login(&serde_json::json!({
+            "username" : &app.test_user.username,
+            "password" : &app.test_user.password
+        }))
+        .await;
+    assert_is_redirect_to(&response, "/admin/dashboard");
+
     let test_cases = vec![
         (
             (serde_json::json!({

@@ -72,11 +72,11 @@ pub async fn run(
                     "/password",
                     get(change_password_form).post(post_change_password),
                 )
-                .route("/logout", post(log_out)),
+                .route("/logout", post(log_out))
+                .route("/newsletters", post(pubslish_newsletters_handler)),
         )
         .route("/health_check", get(health_check_handler))
         .route("/login", get(login_form).post(login))
-        .route("/newsletters", post(pubslish_newsletters_handler))
         .route("/subscriptions", post(subscribe_handler))
         .route("/subscriptions/confirm", get(subscriptions_confirm_handler))
         .layer(
