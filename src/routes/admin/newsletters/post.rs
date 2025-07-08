@@ -91,7 +91,7 @@ pub async fn publish_newsletters_handler(
         let response = Redirect::to("/admin/newsletters").into_response();
         let response = save_response(&state.pg_pool, &idempotency_key, user_id, response)
             .await
-            .map_err(|e| PublishError::UnexpectedError(e))?;
+            .map_err(PublishError::UnexpectedError)?;
         Ok(response)
     } else {
         return Err(PublishError::Unauthenticated("Please log in.".into()));
