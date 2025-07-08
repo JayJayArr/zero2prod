@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    INSERT INTO idempotency (\n        user_id,\n        idempotency_key,\n        created_at\n    )\n    VALUES ($1, $2, now())\n    ON CONFLICT DO NOTHING\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3ac1bd4a3fe70a6c2f5df8acd73b961dfb5fedee5e38c87d5907abd7cd065283"
+}

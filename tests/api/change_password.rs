@@ -60,7 +60,6 @@ async fn new_password_fields_must_match() {
     assert_is_redirect_to(&response, "/admin/password");
     //Act - follow the redirect
     let html_page = app.get_change_password_html().await;
-    dbg!(&html_page);
 
     assert!(html_page.contains(
         "<p><i>You entered two different new passwords - \
@@ -207,6 +206,5 @@ async fn changing_password_works() {
             "password" : &new_password
         }))
         .await;
-    dbg!(&response);
     assert_is_redirect_to(&response, "/admin/dashboard");
 }
