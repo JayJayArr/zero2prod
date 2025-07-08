@@ -151,9 +151,43 @@ async fn newsletter_creation_is_idempotent() {
 
     //Act - Follow the redirect
     let html_page = app.get_newsletter_html().await;
+    dbg!(&html_page);
     assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
 
     //Assert on drop that the issues was sent only **once**
+}
+
+#[tokio::test]
+async fn concurrent_form_submission_is_handled_gracefully() {
+    let app = spawn_app().await;
+    create_confirmed_subscriber(&app).await;
+    app.test_user.login(&app).await;
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
+    //Act submit newsletter form concurrently
+    let newsletter_request_body = serde_json::json!({
+        "title": "Newsletter title",
+        "text": "Newsletter body as plain text",
+        "html": "<p>Newsletter body as HTML</p>",
+        "idempotency_key": uuid::Uuid::new_v4().to_string()
+    });
+    let response1 = app.post_newsletters(&newsletter_request_body);
+    let response2 = app.post_newsletters(&newsletter_request_body);
+
+    let (response1, response2) = tokio::join!(response1, response2);
+    assert_eq!(response1.status(), response2.status());
+    assert_eq!(
+        response1.text().await.unwrap(),
+        response2.text().await.unwrap()
+    );
+
+    //Assert on drop that only one mail was sent
 }
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {

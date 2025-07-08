@@ -16,7 +16,7 @@ pub async fn publish_newsletters_form(
     {
         let mut msg_html = String::new();
         for m in messages.into_iter() {
-            writeln!(msg_html, "<p><i>{m}</i></p>").unwrap();
+            writeln!(msg_html, "<p><i>{m}</i></p>").expect("failed to insert header in message");
         }
         let idempotency_key = uuid::Uuid::new_v4();
         let body = format!(
