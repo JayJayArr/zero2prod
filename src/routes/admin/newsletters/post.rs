@@ -1,3 +1,9 @@
+use crate::{
+    domain::SubscriberEmail,
+    idempotency::{IdempotencyKey, NextAction, save_response, try_processing},
+    routes::session_state::TypedSession,
+    startup::AppState,
+};
 use anyhow::Context;
 use axum::{
     Form,
@@ -8,13 +14,6 @@ use axum::{
 use axum_messages::Messages;
 use serde::Deserialize;
 use sqlx::PgPool;
-
-use crate::{
-    domain::SubscriberEmail,
-    idempotency::{IdempotencyKey, get_saved_response, save_response},
-    routes::session_state::TypedSession,
-    startup::AppState,
-};
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -58,15 +57,18 @@ pub async fn publish_newsletters_handler(
             .clone()
             .try_into()
             .map_err(|e: anyhow::Error| PublishError::ValidationError(e.to_string()))?;
-        if let Some(saved_response) = get_saved_response(&state.pg_pool, &idempotency_key, user_id)
-            .await
-            .map_err(|e| PublishError::ValidationError(e.to_string()))?
-        {
-            messages.info("The newsletter issue has been published!");
-            return Ok(saved_response);
-        }
-        let subscribers = get_confirmed_subscribers(&state.pg_pool).await?;
 
+        let transaction = match try_processing(&state.pg_pool, &idempotency_key, user_id)
+            .await
+            .map_err(PublishError::UnexpectedError)?
+        {
+            NextAction::StartProcessing(t) => t,
+            NextAction::ReturnSavedResponse(saved_response) => {
+                messages.info("The newsletter issue has been published!");
+                return Ok(saved_response);
+            }
+        };
+        let subscribers = get_confirmed_subscribers(&state.pg_pool).await?;
         for subscriber in subscribers {
             match subscriber {
                 Ok(subscriber) => {
@@ -89,7 +91,7 @@ pub async fn publish_newsletters_handler(
         }
         messages.info("The newsletter issue has been published!");
         let response = Redirect::to("/admin/newsletters").into_response();
-        let response = save_response(&state.pg_pool, &idempotency_key, user_id, response)
+        let response = save_response(transaction, &idempotency_key, user_id, response)
             .await
             .map_err(PublishError::UnexpectedError)?;
         Ok(response)

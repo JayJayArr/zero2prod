@@ -4,7 +4,8 @@ use axum::{
     response::Response,
 };
 use reqwest::StatusCode;
-use sqlx::PgPool;
+use sqlx::Executor;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::idempotency::IdempotencyKey;
@@ -14,6 +15,11 @@ use crate::idempotency::IdempotencyKey;
 struct HeaderPairRecord {
     name: String,
     value: Vec<u8>,
+}
+
+pub enum NextAction {
+    StartProcessing(Transaction<'static, Postgres>),
+    ReturnSavedResponse(Response),
 }
 
 pub async fn get_saved_response(
@@ -51,7 +57,7 @@ pub async fn get_saved_response(
 }
 
 pub async fn save_response(
-    pool: &PgPool,
+    mut transaction: Transaction<'static, Postgres>,
     idempotency_key: &IdempotencyKey,
     user_id: Uuid,
     http_response: Response,
@@ -71,34 +77,58 @@ pub async fn save_response(
         h
     };
 
-    sqlx::query_unchecked!(
+    let query = sqlx::query_unchecked!(
         r#"
-    INSERT INTO idempotency (
-        user_id,
-        idempotency_key,
-        response_status_code,
-        response_headers,
-        response_body,
-        created_at
-    )
-    VALUES ($1, $2, $3, $4, $5, now())
-    "#,
+        UPDATE idempotency
+        SET
+            response_status_code = $3,
+            response_headers = $4,
+            response_body = $5
+        WHERE 
+            user_id = $1 AND
+            idempotency_key = $2
+        "#,
         user_id,
         idempotency_key.as_ref(),
         status_code,
         headers,
         body.as_ref()
-    )
-    .execute(pool)
-    .await?;
+    );
+    transaction.execute(query).await?;
+    transaction.commit().await?;
 
     let body = Body::from(body);
     let http_response = Response::from_parts(parts, body);
     Ok(http_response)
 }
 
-// impl PgHasArrayType for HeaderPairRecord {
-//     fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-//         sqlx::postgres::PgTypeInfo::with_name("_header_pair")
-//     }
-// }
+pub async fn try_processing(
+    pool: &PgPool,
+    idempotency_key: &IdempotencyKey,
+    user_id: Uuid,
+) -> Result<NextAction, anyhow::Error> {
+    let mut transaction = pool.begin().await?;
+    let query = sqlx::query!(
+        r#"
+    INSERT INTO idempotency (
+        user_id,
+        idempotency_key,
+        created_at
+    )
+    VALUES ($1, $2, now())
+    ON CONFLICT DO NOTHING
+    "#,
+        user_id,
+        idempotency_key.as_ref()
+    );
+    let n_inserted_rows = transaction.execute(query).await?.rows_affected();
+
+    if n_inserted_rows > 0 {
+        Ok(NextAction::StartProcessing(transaction))
+    } else {
+        let saved_response = get_saved_response(pool, idempotency_key, user_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("We expected a saved response, we didn't find it."))?;
+        Ok(NextAction::ReturnSavedResponse(saved_response))
+    }
+}
