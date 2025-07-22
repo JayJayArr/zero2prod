@@ -2,4 +2,4 @@
 ALTER TABLE
     subscriptions
 ADD
-    COLUMN STATUS TEXT NULL;
+    COLUMN status TEXT NULL;

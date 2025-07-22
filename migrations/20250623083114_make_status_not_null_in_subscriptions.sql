@@ -5,15 +5,15 @@ BEGIN
 UPDATE
     subscriptions
 SET
-    STATUS = 'confirmed'
+    status = 'confirmed'
 WHERE
-    STATUS IS NULL;
+    status IS NULL;
 
 -- make status mandatory
 ALTER TABLE
     subscriptions
 ALTER COLUMN
-    STATUS
+    status
 SET
     NOT NULL;
 
