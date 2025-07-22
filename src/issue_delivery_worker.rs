@@ -104,6 +104,7 @@ async fn dequeue_task(
             r.subscriber_email,
         )))
     } else {
+        transaction.rollback().await?;
         Ok(None)
     }
 }
