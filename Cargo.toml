@@ -28,7 +28,7 @@ serde_json = "1.0.141"
 serde_urlencoded = "0.7.1"
 thiserror = "2.0.12"
 time = "0.3.41"
-tokio = {version = "1.46.1", features = ["rt-multi-thread", "signal"]}
+tokio = {version = "1.47.0", features = ["rt-multi-thread", "signal"]}
 tower-http = {version = "0.6.6", features = ["trace", "follow-redirect", "request-id"]}
 tower-sessions-redis-store = {version = "0.16.0", features = ["enable-rustls"]}
 tracing = "0.1.41"
