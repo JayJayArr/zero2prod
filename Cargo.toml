@@ -13,19 +13,19 @@ name = "zero2prod"
 [dependencies]
 anyhow = "1.0.100"
 argon2 = {version = "0.5.3", features = ["std"]}
-axum = {version = "0.8.4", features= ["tokio", "form", "macros", "tracing", "json"]}
+axum = {version = "0.8.6", features= ["tokio", "form", "macros", "tracing", "json"]}
 axum-login = "0.17.0"
 axum-messages = "0.8.0"
 chrono = "0.4.42"
-config = {version = "0.15.16", features = ["yaml"]}
+config = {version = "0.15.18", features = ["yaml"]}
 rand = {version ="0.9.2", features= ["std_rng"]}
 reqwest = {version = "0.12.23", features = ["json", "rustls-tls", "cookies"]}
 secrecy = {version= "0.10.3", features = ["serde"]}
-serde = {version ="1.0.226", features= ["derive"]}
+serde = {version ="1.0.228", features= ["derive"]}
 serde-aux = "4.7.0"
 serde_json = "1.0.145"
 serde_urlencoded = "0.7.1"
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 time = "0.3.44"
 tokio = {version = "1.47.1", features = ["rt-multi-thread", "signal"]}
 tower-http = {version = "0.6.6", features = ["trace", "follow-redirect", "request-id"]}
