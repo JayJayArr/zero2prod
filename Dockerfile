@@ -16,10 +16,10 @@ ENV SQLX_OFFLINE=true
 RUN cargo build --release --bin zero2prod
 
 # Runtime
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 WORKDIR /app
 RUN apt-get update -y \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && apt-get install -y --no-install-recommends openssl ca-certificates clang lld \
   # Clean up
   && apt-get autoremove -y \
   && apt-get clean -y \
@@ -27,6 +27,7 @@ RUN apt-get update -y \
 
 COPY --from=builder  /app/target/release/zero2prod zero2prod
 COPY configuration configuration
-ENV APP_ENVIRONMENT=production
+ENV APP_ENVIRONMENT=local
+# EXPOSE 3000
 
-ENTRYPOINT [ "./target/release/zero2prod" ]
+ENTRYPOINT [ "./zero2prod" ]

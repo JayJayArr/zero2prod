@@ -1,7 +1,9 @@
 application:
   host: 0.0.0.0
+  base_url: 0.0.0.0
 database:
   require_ssl: true
 email_client:
   base_url: "https://api/postmarkapp.com"
   sender_email: "something@gmail.com"
+redis_uri: "redis://127.0.0.1:6379"
