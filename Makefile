@@ -10,7 +10,7 @@ test: ## Run all tests
 
 .PHONY: doc
 doc: ## Build and open docs
-	cargo docs --open
+	cargo doc --open
 
 .PHONY: docker
 docker: ## Build docker image
